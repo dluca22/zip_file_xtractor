@@ -16,17 +16,13 @@ import java.util.zip.ZipEntry;
  * }
  * }
  * </pre>
- * 
- * @author dluca22
- * @version 1.0
- * @since 2024
  */
-public class Tools {
+public class FileValidator {
 
     /**
      * Private constructor to prevent instantiation of this utility class.
      */
-    private Tools() {
+    private FileValidator() {
         throw new AssertionError("Cannot instantiate utility class");
     }
 
