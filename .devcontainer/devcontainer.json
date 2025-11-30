@@ -1,0 +1,16 @@
+{
+  "name": "Java Dev Container",
+  "image": "dluca22/java-dev:v1",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven"
+      ]
+    }
+  }
+}
