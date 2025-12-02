@@ -64,7 +64,7 @@ public class FileController {
         java.util.Iterator<File> iterator = zipFilesInDirectory.iterator();
         while (iterator.hasNext()) {
             File file = iterator.next();
-            if (this.zipContainsSTL(file) == false) {
+            if (this.zipContainsSTL(file) == true) {
                 System.out.println("yeee");
                 ResultFormatter result = this.extractContentAndMoveZip(file);
                 if(result.success()){
@@ -98,11 +98,12 @@ public class FileController {
     }
 
     private ResultFormatter extractContentAndMoveZip(File file) {
-
+        String zipFilePath = file.getPath();
+        String fileName = file.getName();
         try {
-            String zipFilePath = file.getPath();
-            String fileName = file.getName();
-            String destDir = zipFilePath + fileName.replace(".stl", "").replace(" ", "_");
+            // String destDir = file.getParent() + "/" + fileName.replace(".stl", "").replace(" ", "_");
+            // String dest = new Path
+            String destDir = this.createTargetDirectory(file);
 
             // try extract the content of the file to a dir within the same dir
             this.unzip(zipFilePath, destDir);
@@ -110,8 +111,33 @@ public class FileController {
             this.moveFile(zipFilePath, destDir, fileName);
 
             return ResultFormatter.success("Action done on " + fileName);
+        } catch (IOException e) {
+            System.out.println("Failed during creation of target dir " + fileName );
+            return ResultFormatter.failure();
         } catch (Exception e) {
             return ResultFormatter.failure();
+        }
+    }
+
+    private String createTargetDirectory(File file) throws IOException {
+        try{
+
+        String destDirName = file.getName()
+            .replace(".stl", "")
+            .replace(" ", "_");
+            
+            
+            // Better: use Path API
+            Path destDir = Paths.get(file.getParent(), destDirName);
+            
+            // Create directory and parents if missing
+            Files.createDirectories(destDir);
+            
+            return destDir.toString();
+        } catch (IOException exception) {
+            System.out.println("Error on targetDirectory");
+            // return "";
+            throw exception;
         }
     }
 
