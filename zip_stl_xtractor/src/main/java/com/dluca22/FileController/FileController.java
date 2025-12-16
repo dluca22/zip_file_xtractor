@@ -29,6 +29,7 @@ public class FileController {
 
     public FileController(String scanDirectory) {
         // super();
+        
         this.scanDirectory = scanDirectory;
 
     }
@@ -42,6 +43,7 @@ public class FileController {
 
         // System.out.println(fileName);
         // }
+        
         this.processZipFiles();
     }
 
@@ -119,11 +121,11 @@ public class FileController {
         }
     }
 
-    private String createTargetDirectory(File file) throws IOException {
+    String createTargetDirectory(File file) throws IOException {
         try{
 
         String destDirName = file.getName()
-            .replace(".stl", "")
+            .replace(".zip", "")
             .replace(" ", "_");
             
             

@@ -1,8 +1,11 @@
 package com.dluca22.Main;
 
-// import java.io.File;
-// import java.util.Arrays;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 
+import com.dluca22.DirectoryWatcher.DirectoryWatcher;
 import com.dluca22.FileController.FileController;
 
 /**
@@ -14,6 +17,8 @@ public class App {
 
         // final File folder = new File("/workspace/testFiles");
         // scanFilesInFolder(folder);
+        Path watchDir = Paths.get("/workspace/testFiles");
+        DirectoryWatcher DirectoryWatcher = new DirectoryWatcher(watchDir);
 
         FileController fileController = new FileController("/workspace/testFiles");
         fileController.init();
