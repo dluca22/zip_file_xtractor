@@ -3,12 +3,10 @@ package com.dluca22.DirectoryWatcher;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,8 +40,7 @@ public class DirectoryWatcher {
        * A watch key is created when a watchable object is registered with a watch
        * service.
        */
-      /* storing value not needed if not for reference WatchKey key = */ this.directory.register(watcher, ENTRY_CREATE,
-          ENTRY_DELETE); // ENTRY_MODIFY would trigger a re-cycle sometimes..readd with a debounce if
+      /* storing value not needed if not for reference WatchKey key = */ this.directory.register(watcher, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
                          // needed
 
       this.startWatching();
@@ -72,6 +69,7 @@ public class DirectoryWatcher {
         switch (kind.name()) {
           // OVERFLOW = A special event to indicate that events may have been lost or
           // discarded.
+          case "ENTRY_DELETE":
           case "OVERFLOW":
             continue;
           // all other events registered still trigger a rescan
@@ -99,7 +97,7 @@ public class DirectoryWatcher {
     if (true && this.lastExecutionTimestamp != 0) {
       timeStamp = Instant.now().getEpochSecond();
       timeDiff = timeStamp - lastExecutionTimestamp;
-      if (timeDiff < 3) {
+      if (timeDiff < 3) { 
         return;
       }
     }
