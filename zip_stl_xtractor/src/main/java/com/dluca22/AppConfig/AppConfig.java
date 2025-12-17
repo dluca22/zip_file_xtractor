@@ -1,0 +1,77 @@
+package com.dluca22.AppConfig;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Properties;
+
+// config class to inject
+public final class AppConfig {
+
+  // map to store env variables by key
+  private static final Map<ConfigKeys, Object> values = new EnumMap<>(ConfigKeys.class);
+  
+  // on init load properties and run check for the required values
+  static {
+    loadProperties();
+    checkRequired();
+  }
+
+
+  private static void loadProperties() {
+    /* The Properties class represents a persistent set of properties.
+    The Properties can be saved to a stream or loaded from a stream. 
+    Each key and its corresponding value in the property list is a string.
+ */
+    Properties properties = new Properties();
+
+    try(InputStream inputStream = AppConfig.class
+      .getClassLoader() // the class loader that loaded the class or interface represented by this Class object.
+      .getResourceAsStream("applicaiton.properties") // load the file as a stream
+    ){ 
+      // read the env file application.properties from the inputStream
+        if(inputStream != null){
+          properties.load(inputStream);
+        }
+      } catch (IOException e){
+        throw new RuntimeException("Failed while loading properties", e);
+      }
+
+      // for each key configured in the ConfigKeys enum, try to get the key from ENV variable (i.e. from docker)
+      // else try to fetch it from the application.properties (like a default fallback if no ENV present)
+      for(ConfigKeys key: ConfigKeys.values()){
+        String raw = System.getenv(key.keyName());
+        if(raw == null) {
+          raw = properties.getProperty(key.variableName());
+        }
+
+        // if found the key, assign to the class values map
+        if(raw != null){
+          Object parsed = parseConfigVariable(raw, key.type()); // parse the values based on the type defined in the enum
+          values.put(key, parsed);
+        }
+      }
+  }
+
+  // based on the type declared in the ConfigKeys enum, return the parsed value
+  private static Object parseConfigVariable(String keyName, Class<?> type) {
+    if(type == Integer.class) return Integer.parseInt(keyName);
+    if(type == Boolean.class) return Boolean.parseBoolean(keyName);
+    return keyName;
+  }
+
+  // validate the key enum key is required and actually present
+  private static void checkRequired() {
+    for (ConfigKeys key: ConfigKeys.values()) {
+      if (key.required() && !values.containsKey(key)){
+        throw new IllegalStateException("Missing required configuration key: " + key.keyName());
+      }
+    }
+  }
+
+    public static int getInt(String key, int defaultValue) {
+        Object value = values.get(key);
+        return value != null ? (Integer) value : defaultValue;
+    }
+}
