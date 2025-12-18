@@ -45,8 +45,14 @@ public class AppConfigTest {
   }
 
   @Test
-  @DisplayName("Test TARGET_DIR parameter is present")
+  @DisplayName("Test TARGET_DIR parameter is not present") // it should fail if is provided in the application.properties
   void TestTargetDirIsNotPresent() {
+    assertFalse(AppConfig.isPresent(ConfigKey.TARGET_DIR));
+  }
+
+  @Test
+  @DisplayName("Test TARGET_DIR parameter is present") // it should pass if provided in application.properties
+  void TestTargetDirIsPresent() {
     assertFalse(AppConfig.isPresent(ConfigKey.TARGET_DIR));
   }
 }
