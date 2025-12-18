@@ -5,6 +5,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 // import java.util.Arrays;
 
+import com.dluca22.AppConfig.AppConfig;
+import com.dluca22.AppConfig.ConfigKey;
 import com.dluca22.DirectoryWatcher.DirectoryWatcher;
 // import com.dluca22.FileController.FileController;
 import com.dluca22.MioLogger.MioLogger;
@@ -23,7 +25,7 @@ public class App {
 
         // final File folder = new File("/workspace/testFiles");
         // scanFilesInFolder(folder);
-        Path watchDir = Paths.get("/workspace/testFiles");
+        Path watchDir = Paths.get(AppConfig.getString(ConfigKey.WATCH_DIR));
         DirectoryWatcher dirWatcher = new DirectoryWatcher(watchDir);
         dirWatcher.AddEventListner(ilLogger);
         dirWatcher.init();

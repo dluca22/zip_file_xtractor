@@ -18,17 +18,21 @@ public class DirectoryWatcher {
   WatchService watcher;
   private final List<DirectoryEventListener> listeners = new ArrayList<>();
 
+  // empty constructor
   public DirectoryWatcher() {
   }
 
+  // class constructor
   public DirectoryWatcher(Path directory) {
     this.directory = directory;
   }
 
+  // method to register listeners of this class' events
   public void AddEventListner(DirectoryEventListener listener) {
     this.listeners.add(listener);
   }
 
+  // initialize starts a new Filesystem watcher and starts the loop
   public void init() {
     try {
       // Watchservice instantiation
@@ -50,6 +54,7 @@ public class DirectoryWatcher {
     }
   }
 
+  
   private void startWatching() {
     for (;;) {
       WatchKey key;
