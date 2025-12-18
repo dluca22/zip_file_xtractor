@@ -117,4 +117,37 @@ public class FileValidator {
     public static boolean isSTLFile(ZipEntry zipEntry) {
         return matchExtension(zipEntry.getName(), "stl");
     }
+
+    /**
+     * Determines if a zip entry (file inside a zip archive) is an STL 3D model file based on its extension.
+     *
+     * @param zipEntry the ZipEntry object representing a file inside a zip archive
+     * @return {@code true} if the zip entry has a ".stl" extension, {@code false} otherwise
+     * 
+     * @examples
+     * <ul>
+     * <li>"models/part.3mf" → true</li>
+     * <li>"images/photo.png" → false</li>
+     * </ul>
+     */
+    public static boolean is3MfFile(ZipEntry zipEntry) {
+        return matchExtension(zipEntry.getName(), "3mf");
+    }
+    
+    /**
+     * Determines if a zip entry (file inside a zip archive) is an STL 3D model file based on its extension.
+     *
+     * @param zipEntry the ZipEntry object representing a file inside a zip archive
+     * @return {@code true} if the zip entry has one of the accepted files extension between .stl and .3mf
+     * 
+     * @examples
+     * <ul>
+     * <li>"models/part.3mf" → true</li>
+     * <li>"models/part.stl" → true</li>
+     * <li>"images/photo.png" → false</li>
+     * </ul>
+     */
+    public static boolean is3dPrintableFle(ZipEntry zipEntry) {
+        return isSTLFile(zipEntry) || is3MfFile(zipEntry);
+    }
 }
