@@ -1,0 +1,12 @@
+
+# commando build 1 test
+docker build -f ./docker/Dockerfile -t zip_xtractor:dev .
+ 
+ # builda l'immagine per buildare  java dentro un immagine
+ (cd .. && docker build -f ./docker/Dockerfile -t zip_xtractor:dev .)
+
+# crea il container dal docker-compose
+  docker compose -f docker-compose-compiled.yml up
+
+# fa partire il c0ontainer normalmente senza fargli eseguire Jvva in modo che non fallisce e si puo ananlzizare
+ docker compose -f docker-compose-compiled.yml run \\n  --rm -it \\n  --entrypoint bash \\n  zip_xtractor\n

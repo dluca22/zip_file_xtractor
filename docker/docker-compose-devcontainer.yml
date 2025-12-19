@@ -1,0 +1,12 @@
+services:
+  java-dev:
+    image: dluca22/java-dev:latest
+    container_name: java-dev
+    user: 1000:1000
+    # environment:
+    #   - HOME=/workspace
+    command: tail -f /dev/null # keep alive infinite loop
+    volumes:
+      - ./:/workspace # map current dir to workspace directory
+      - ./testFiles:/testfiles 
+    working_dir: /workspace # places starting dir into /workspace

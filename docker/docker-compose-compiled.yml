@@ -1,0 +1,13 @@
+services:
+  zip_xtractor:
+    image: zip_xtractor:dev
+    container_name: zip_xtractor
+    user: 1000:1000
+    command: tail -f /dev/null # keep alive infinite loop
+    volumes:
+      - /home/xliuk/Downloads:/app/testFiles
+      - /home/xliuk/Documents/3d_prints/outputFromZipXractor:/app/outputDir
+    environment:
+      WATCH_DIR: "/app/testFiles"
+      TARGET_DIR: "/app/outputDir"
+      DEBOUNCE_TIME: "3"
