@@ -1,7 +1,8 @@
 {
   "name": "Java Dev Container",
-  "image": "dluca22/java-dev:v1",
+  "image": "dluca22/java-dev:latest",
   "workspaceFolder": "/workspace",
+  "remoteUser": "appuser",
   "mounts": [
     "source=${localWorkspaceFolder},target=/workspace,type=bind"
   ],
@@ -9,7 +10,17 @@
     "vscode": {
       "extensions": [
         "vscjava.vscode-java-pack",
-        "vscjava.vscode-maven"
+        "vscjava.vscode-maven",
+        "DavidAnson.vscode-markdownlint",
+        "donjayamanne.githistory",
+        "eamodio.gitlens",
+        "formulahendry.code-runner",
+        "Gydunhn.vsc-essentials",
+        "Gydunhn.vsc-essentials-core",
+        "jeff-hykin.better-dockerfile-syntax",
+        "mattpocock.ts-error-translator",
+        "phil294.git-log--graph",
+        "yzhang.markdown-all-in-one"
       ]
     }
   }

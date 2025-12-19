@@ -3,6 +3,8 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 .kotlin
+.idea/
+
 
 ### Eclipse ###
 .apt_generated
@@ -23,12 +25,20 @@ bin/
 /nbdist/
 /.nb-gradle/
 
+
 ### VS Code ###
 .vscode/
+.vscode-server/
 
 ### Mac OS ###
 .DS_Store
-.target/
 
 
 zip_stl_xtractor/target/
+testFiles/
+.gnupg/
+.gnupg/
+
+target/
+testFiles/
+.gitconfig

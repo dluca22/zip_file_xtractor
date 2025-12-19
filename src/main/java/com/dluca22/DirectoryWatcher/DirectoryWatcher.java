@@ -10,6 +10,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.dluca22.AppConfig.AppConfig;
+import com.dluca22.AppConfig.ConfigKey;
+
 import static java.nio.file.StandardWatchEventKinds.*;
 
 public class DirectoryWatcher {
@@ -54,7 +57,7 @@ public class DirectoryWatcher {
     }
   }
 
-  
+
   private void startWatching() {
     for (;;) {
       WatchKey key;
@@ -79,7 +82,7 @@ public class DirectoryWatcher {
             continue;
           // all other events registered still trigger a rescan
           default:
-            this.dispatchEvent(kind.name());
+            this.handleEvent(kind.name());
             continue;
         }
       }
@@ -94,15 +97,19 @@ public class DirectoryWatcher {
     }
   }
 
-  private void dispatchEvent(String eventName) {
+  /**
+   * Send event to registered listener based on the last execution and debounce time if set
+   * @param eventName
+   */
+  private void handleEvent(String eventName) {
     long timeStamp = 0;
     long timeDiff = 0;
 
-    // if(config.debounce){
-    if (true && this.lastExecutionTimestamp != 0) {
+    if (this.lastExecutionTimestamp != 0) {
       timeStamp = Instant.now().getEpochSecond();
       timeDiff = timeStamp - lastExecutionTimestamp;
-      if (timeDiff < 3) { 
+      
+      if (timeDiff < AppConfig.getInt(ConfigKey.DEBOUNCE_TIME)) { 
         return;
       }
     }

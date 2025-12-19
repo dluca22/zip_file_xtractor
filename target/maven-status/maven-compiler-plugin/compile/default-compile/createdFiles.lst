@@ -1,8 +1,0 @@
-com/dluca22/Tools/FileValidator.class
-com/dluca22/Main/App.class
-com/dluca22/MioLogger/MioLogger.class
-com/dluca22/DirectoryWatcher/DirectoryEventListener.class
-com/dluca22/DirectoryWatcher/DirectoryWatcher.class
-com/dluca22/AppConfig/AppConfig.class
-com/dluca22/Tools/ResultFormatter.class
-com/dluca22/AppConfig/ConfigKey.class
