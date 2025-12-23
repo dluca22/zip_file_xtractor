@@ -2,15 +2,19 @@ package com.dluca22.FileController;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -22,48 +26,66 @@ import com.dluca22.AppConfig.ConfigKey;
 import com.dluca22.DirectoryWatcher.DirectoryEventListener;
 import com.dluca22.Tools.FileValidator;
 import com.dluca22.Tools.ResultFormatter;
+import com.dluca22.Tools.Utils;
 
 // file controller to scan and analyze files in the given directory
 public class FileController implements DirectoryEventListener {
 
-  String directoryPath;
-  File directory;
-  String customDestDirectory;
-  boolean busy = false;
+  Path sourceDir;
+  Path destDir;
+  boolean isRunning = false;
 
   ArrayList<File> zipFilesInDirectory = new ArrayList<>();
-  ArrayList<String> zipFilesNamesInDirectory = new ArrayList<>();
+  // ArrayList<String> zipFilesNamesInDirectory = new ArrayList<>();
+  Set<String> fileList = new HashSet<>();
 
-  public FileController(String scanDirectory) {
+  public FileController(Path source) {
     // super();
 
-    this.directoryPath = scanDirectory;
-    this.directory = new File(this.directoryPath);
-    if (AppConfig.getString(ConfigKey.TARGET_DIR) != null) {
-      this.customDestDirectory = AppConfig.getString(ConfigKey.TARGET_DIR);
-    }
+    this.setupDestinationDir();
   }
-
+ 
   public void run() {
-    this.busy = true; // temp add guard to avoid re-running while still processing
+
+    if (this.isRunning) {
+      return;
+    }
+
+    this.isRunning = true;
     this.scanFilesInFolder();
     this.processZipFiles();
-    this.busy = false;
+    this.isRunning = false;
   }
 
   // list all the files in the folder and appending them to the array of zipFiles
   // if file is a .zip
-  // will later add control to check wether file contains .stl files
   private void scanFilesInFolder() {
-    for (final File file : this.directory.listFiles()) {
 
-      String fileName = file.getName();
-      // if (file.isFile() && fileName.endsWith(".zip")) {
-      if (file.isFile() && FileValidator.isZipFile(file)) {
-        this.zipFilesInDirectory.add(file);
-        this.zipFilesNamesInDirectory.add(fileName);
+    try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
+      for (Path path : dstream) {
+        if (Files.isDirectory(path) == false &&
+            FileValidator.isZipFile(path) == true){
+            // FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == false) {
+
+          // fileList.add(path.getFileName()
+          //     .toString());
+          boolean exceeds = FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB));
+          System.out.println( path.getFileName().toString() + (exceeds ? "   EXCEEDS" : "  not exceeds"));
+        }
       }
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+
+    // for (final File file : this.sourceDir.listFiles()) {
+
+    //   String fileName = file.getName();
+    //   // if (file.isFile() && fileName.endsWith(".zip")) {
+    //   if (file.isFile() && FileValidator.isZipFile(file)) {
+    //     this.zipFilesInDirectory.add(file);
+    //     // this.zipFilesNamesInDirectory.add(fileName);
+    //   }
+    // }
   }
 
   private void processZipFiles() {
@@ -258,13 +280,33 @@ public class FileController implements DirectoryEventListener {
     return destFile;
   }
 
-  public String getDestinationParent(File file) {
-    return this.customDestDirectory != null ? this.customDestDirectory : file.getParent();
+
+
+  private void setupDestinationDir() {
+    // start by assigning the same path to avoid repeating 
+    this.destDir = this.sourceDir;
+    // get from config
+    String destinationString = AppConfig.getString(ConfigKey.TARGET_DIR);
+    
+    // not configured, assign same as source
+    if(destinationString == null){ return; }
+
+    try {
+      Path desPath = Paths.get(destinationString);
+      if(Utils.isSameDirectory(this.sourceDir, desPath) == false){
+        this.destDir = desPath;
+      }
+
+    } catch (IOException e) {
+      System.out.println("Cannot get required Destination, output redirected to Source dest");
+      return; // return with same default source
+    };
   }
+
 
   @Override
   public void onContentChanged(String event) {
-    if (this.busy == false) {
+    if (this.isRunning == false) {
       this.run();
     }
   }

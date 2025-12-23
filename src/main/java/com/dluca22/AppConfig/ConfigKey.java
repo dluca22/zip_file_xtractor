@@ -6,7 +6,8 @@ public enum ConfigKey {
   // accepted enum values
   WATCH_DIR(String.class, true, "/data"),
   TARGET_DIR(String.class, false, null),
-  DEBOUNCE_TIME(Integer.class, false, 3);
+  DEBOUNCE_TIME(Integer.class, false, 3),
+  FILE_SIZE_LIMIT_MB(Integer.class, false, 150);
 
   // private values
   private final Class<?> type;

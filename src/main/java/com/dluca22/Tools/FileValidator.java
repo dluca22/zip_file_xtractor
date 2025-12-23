@@ -1,6 +1,9 @@
 package com.dluca22.Tools;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 
 /**
@@ -83,6 +86,10 @@ public class FileValidator {
     public static boolean isZipFile(File file) {
         return matchExtension(file.getName(), "zip");
     }
+    
+    public static boolean isZipFile(Path file) {
+        return matchExtension(file.getFileName().toString(), "zip");
+    }
 
     /**
      * Determines if a file is an STL 3D model file based on its extension.
@@ -150,4 +157,12 @@ public class FileValidator {
     public static boolean is3dPrintableFle(ZipEntry zipEntry) {
         return isSTLFile(zipEntry) || is3MfFile(zipEntry);
     }
+    
+    public static boolean exceedsFileDimensionLImit(Path filePath, int fileSizeLimitMB) throws IOException {
+        long fileSizeBytes = Files.size(filePath);
+        long limitSizeBytes = Utils.convertToBytes(fileSizeLimitMB, "MB");
+
+        return fileSizeBytes > limitSizeBytes;
+    }
+
 }
