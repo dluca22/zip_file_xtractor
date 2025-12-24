@@ -21,7 +21,7 @@ public class App {
         // start the directory watcher, not dependent on any logic
         Path sourcePath = Paths.get(sourceDirectory);
 
-        if(Files.exists(sourcePath) == false || Files.isDirectory(sourcePath) == false){
+        if (Files.exists(sourcePath) == false || Files.isDirectory(sourcePath) == false) {
             System.out.println("[ERROR] " + sourcePath + " does not exist, or not a directory.");
             System.exit(404);
             return;
@@ -30,14 +30,9 @@ public class App {
         DirectoryWatcher dirWatcher = new DirectoryWatcher(sourcePath);
         dirWatcher.AddEventListner(ilLogger);
 
-        try {
-            fileController = new FileController(sourcePath);
-            fileController.run();
-            dirWatcher.AddEventListner(fileController);
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        fileController = new FileController(sourcePath);
+        fileController.run();
+        dirWatcher.AddEventListner(fileController);
 
         dirWatcher.init();
     }

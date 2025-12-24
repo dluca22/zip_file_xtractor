@@ -35,13 +35,11 @@ public class FileController implements DirectoryEventListener {
   Path destDir;
   boolean isRunning = false;
 
-  ArrayList<File> zipFilesInDirectory = new ArrayList<>();
   // ArrayList<String> zipFilesNamesInDirectory = new ArrayList<>();
-  Set<String> fileList = new HashSet<>();
+  Set<Path> fileList = new HashSet<>();
 
   public FileController(Path source) {
     // super();
-
     this.setupDestinationDir();
   }
  
@@ -57,18 +55,17 @@ public class FileController implements DirectoryEventListener {
     this.isRunning = false;
   }
 
-  // list all the files in the folder and appending them to the array of zipFiles
-  // if file is a .zip
+  // scan the source directory and zip files (matching conditions) to the Set of tracked ones to process
   private void scanFilesInFolder() {
 
     try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
       for (Path path : dstream) {
         if (Files.isDirectory(path) == false &&
-            FileValidator.isZipFile(path) == true){
-            // FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == false) {
+            FileValidator.isZipFile(path) == true &&
+            FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == false) {
 
-          // fileList.add(path.getFileName()
-          //     .toString());
+            fileList.add(path); // add file to the traacked ones
+
           boolean exceeds = FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB));
           System.out.println( path.getFileName().toString() + (exceeds ? "   EXCEEDS" : "  not exceeds"));
         }
@@ -76,23 +73,14 @@ public class FileController implements DirectoryEventListener {
     } catch (IOException e) {
       e.printStackTrace();
     }
-
-    // for (final File file : this.sourceDir.listFiles()) {
-
-    //   String fileName = file.getName();
-    //   // if (file.isFile() && fileName.endsWith(".zip")) {
-    //   if (file.isFile() && FileValidator.isZipFile(file)) {
-    //     this.zipFilesInDirectory.add(file);
-    //     // this.zipFilesNamesInDirectory.add(fileName);
-    //   }
-    // }
   }
 
+  // runs through fileList and checks if contains printable
   private void processZipFiles() {
-    java.util.Iterator<File> iterator = zipFilesInDirectory.iterator();
+    java.util.Iterator<Path> iterator = fileList.iterator();
     while (iterator.hasNext()) {
-      File file = iterator.next();
-      if (this.zipContainsSTL(file) == true) {
+      Path file = iterator.next();
+      if (this.zipContainsPrintable(file) == true) {
         ResultFormatter result = this.extractContentAndMoveZip(file);
         if (result.success()) {
           iterator.remove();
@@ -101,15 +89,16 @@ public class FileController implements DirectoryEventListener {
     }
   }
 
-  private boolean zipContainsSTL(File zip) {
+  // opens the zip file and check if content is of type printable (.stl, .3mf)
+  private boolean zipContainsPrintable(Path zip) {
 
-    try (ZipFile zipFile = new ZipFile(zip)) {
+    try (ZipFile zipFile = new ZipFile(zip.toFile())) {
       Enumeration<? extends ZipEntry> entries = zipFile.entries();
       while (entries.hasMoreElements()) {
         ZipEntry entry = entries.nextElement();
 
         // Check if entry is a directory
-        if (!entry.isDirectory() && FileValidator.isSTLFile(entry)) {
+        if (!entry.isDirectory() && FileValidator.is3dPrintableFle(entry)) {
           try (InputStream inputStream = zipFile.getInputStream(entry)) {
             // Read and process the entry contents using the inputStream
             return true;
@@ -124,14 +113,11 @@ public class FileController implements DirectoryEventListener {
     return false;
   }
 
-  private ResultFormatter extractContentAndMoveZip(File file) {
-    String zipFilePath = file.getPath();
-    String fileName = file.getName();
+  private ResultFormatter extractContentAndMoveZip(Path file) {
+    String zipFilePath = file.getParent().toString();
+    String fileName = file.getFileName().toString();
     try {
-      // String destDir = file.getParent() + "/" + fileName.replace(".stl",
-      // "").replace(" ", "_");
-      // String dest = new Path
-      String destDir = this.createTargetDirectory(file);
+      Path destDir = this.createTargetDirectory(fileName);
 
       // try extract the content of the file to a dir within the same dir
       this.unzip(zipFilePath, destDir);
@@ -147,21 +133,19 @@ public class FileController implements DirectoryEventListener {
     }
   }
 
-  String createTargetDirectory(File file) throws IOException {
+  Path createTargetDirectory(String zipFileName) throws IOException {
     try {
 
-      String destDirName = file.getName()
+      String destDirName = zipFileName
           .replace(".zip", "")
           .replace(" ", "_");
 
-      // Better: use Path API
-      String destionationParent = this.getDestinationParent(file);
-      Path destDir = Paths.get(destionationParent, destDirName);
+      Path destFile = Paths.get(this.destDir.getFileName().toString(), destDirName); // joins the destionation dir to the new fileName (like path.resolve)
 
       // Create directory and parents if missing
-      Files.createDirectories(destDir);
+      Files.createDirectories(destFile);
 
-      return destDir.toString();
+      return destFile;
     } catch (IOException exception) {
       System.out.println("Error on targetDirectory");
       // return "";
@@ -182,17 +166,19 @@ public class FileController implements DirectoryEventListener {
   // Posted by Oliv, modified by community. See post 'Timeline' for change history
   // Retrieved 2025-12-18, License - CC BY-SA 4.0
 
-  public void unzip2(InputStream is, Path targetDir) throws IOException {
+  public void unzip(String zipFilePath, Path targetDir) throws IOException {
+    FileInputStream is = new FileInputStream(zipFilePath);
+
     targetDir = targetDir.toAbsolutePath();
     try (ZipInputStream zipIn = new ZipInputStream(is)) {
-      for (ZipEntry ze; (ze = zipIn.getNextEntry()) != null;) {
-        Path resolvedPath = targetDir.resolve(ze.getName()).normalize();
+      for (ZipEntry zipEntry; (zipEntry = zipIn.getNextEntry()) != null;) {
+        Path resolvedPath = targetDir.resolve(zipEntry.getName()).normalize();
         if (!resolvedPath.startsWith(targetDir)) {
           // see: https://snyk.io/research/zip-slip-vulnerability
           throw new RuntimeException("Entry with an illegal path: "
-              + ze.getName());
+              + zipEntry.getName());
         }
-        if (ze.isDirectory()) {
+        if (zipEntry.isDirectory()) {
           Files.createDirectories(resolvedPath);
         } else {
           Files.createDirectories(resolvedPath.getParent());
@@ -202,63 +188,62 @@ public class FileController implements DirectoryEventListener {
     }
   }
 
-  private void unzip(String zipFilePath, String destDir) {
-    File dir = new File(destDir);
-    // create output directory if it doesn't exist
-    if (!dir.exists())
-      dir.mkdirs();
+  // private void unzip(String zipFilePath, String destDir) {
+  //   File dir = new File(destDir);
+  //   // create output directory if it doesn't exist
+  //   if (!dir.exists())
+  //     dir.mkdirs();
 
-    FileInputStream fileInputStream;
-    // buffer for read and write data to file
-    byte[] buffer = new byte[1024];
-    try {
+  //   FileInputStream fileInputStream;
+  //   // buffer for read and write data to file
+  //   byte[] buffer = new byte[1024];
+  //   try {
 
-      // create a stream to read content sequentally, does not have "selecatble"
-      // entries and access to individual files like "ZipFile"
-      fileInputStream = new FileInputStream(zipFilePath);
-      // ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
-      // ZipEntry zipEntry = zipInputStream.getNextEntry();
-      // while (zipEntry != null) {
-      // String fileName = zipEntry.getName();
-      // File newFile = new File(destDir + File.separator + fileName);
-      // System.out.println("Unzipping to " + newFile.getAbsolutePath());
-      // // create directories for sub directories in zip
-      // new File(newFile.getParent()).mkdirs();
+  //     // create a stream to read content sequentally, does not have "selecatble"
+  //     // entries and access to individual files like "ZipFile"
+  //     fileInputStream = new FileInputStream(zipFilePath);
+  //     // ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
+  //     // ZipEntry zipEntry = zipInputStream.getNextEntry();
+  //     // while (zipEntry != null) {
+  //     // String fileName = zipEntry.getName();
+  //     // File newFile = new File(destDir + File.separator + fileName);
+  //     // System.out.println("Unzipping to " + newFile.getAbsolutePath());
+  //     // // create directories for sub directories in zip
+  //     // new File(newFile.getParent()).mkdirs();
 
-      // FileOutputStream fileOutputStream = new FileOutputStream(newFile);
-      // int len;
-      // // writes to output stream until EOF
-      // while ((len = zipInputStream.read(buffer)) > 0) {
-      // fileOutputStream.write(buffer, 0, len);
-      // }
+  //     // FileOutputStream fileOutputStream = new FileOutputStream(newFile);
+  //     // int len;
+  //     // // writes to output stream until EOF
+  //     // while ((len = zipInputStream.read(buffer)) > 0) {
+  //     // fileOutputStream.write(buffer, 0, len);
+  //     // }
 
-      // fileOutputStream.close();
-      // // close this ZipEntry
-      // zipInputStream.closeEntry();
-      // zipEntry = zipInputStream.getNextEntry();
-      // }
+  //     // fileOutputStream.close();
+  //     // // close this ZipEntry
+  //     // zipInputStream.closeEntry();
+  //     // zipEntry = zipInputStream.getNextEntry();
+  //     // }
 
-      // // close last ZipEntry
-      // zipInputStream.closeEntry();
-      // zipInputStream.close();
-      // fileInputStream.close();
+  //     // // close last ZipEntry
+  //     // zipInputStream.closeEntry();
+  //     // zipInputStream.close();
+  //     // fileInputStream.close();
 
-      this.unzip2(fileInputStream, Paths.get(destDir));
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+  //     this.unzip2(fileInputStream, Paths.get(destDir));
+  //   } catch (IOException e) {
+  //     e.printStackTrace();
+  //   }
 
-  }
+  // }
 
-  private void moveFile(String sourceFile, String targetFile, String fileName) {
+  private void moveFile(String sourceFile, Path targetFile, String fileName) {
     Path source = Paths.get(sourceFile);
-    Path target = Paths.get(targetFile, fileName);
 
     try {
       // Ensure target directory exists
-      Files.createDirectories(target.getParent());
+      Files.createDirectories(targetFile.getParent());
 
-      Path temp = Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+      Path temp = Files.move(source, targetFile, StandardCopyOption.REPLACE_EXISTING);
       if (temp != null) {
         System.out.println("File renamed and moved successfully");
       }
