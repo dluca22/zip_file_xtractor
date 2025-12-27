@@ -42,7 +42,7 @@ public class FileController implements DirectoryEventListener {
     // super();
     this.setupDestinationDir();
   }
- 
+
   public void run() {
 
     if (this.isRunning) {
@@ -55,7 +55,8 @@ public class FileController implements DirectoryEventListener {
     this.isRunning = false;
   }
 
-  // scan the source directory and zip files (matching conditions) to the Set of tracked ones to process
+  // scan the source directory and zip files (matching conditions) to the Set of
+  // tracked ones to process
   private void scanFilesInFolder() {
 
     try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
@@ -64,10 +65,7 @@ public class FileController implements DirectoryEventListener {
             FileValidator.isZipFile(path) == true &&
             FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == false) {
 
-            fileList.add(path); // add file to the traacked ones
-
-          boolean exceeds = FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB));
-          System.out.println( path.getFileName().toString() + (exceeds ? "   EXCEEDS" : "  not exceeds"));
+          fileList.add(path); // add file to the traacked ones
         }
       }
     } catch (IOException e) {
@@ -79,11 +77,13 @@ public class FileController implements DirectoryEventListener {
   private void processZipFiles() {
     java.util.Iterator<Path> iterator = fileList.iterator();
     while (iterator.hasNext()) {
-      Path file = iterator.next();
-      if (this.zipContainsPrintable(file) == true) {
-        ResultFormatter result = this.extractContentAndMoveZip(file);
-        if (result.success()) {
+      Path filePath = iterator.next();
+      if (this.zipContainsPrintable(filePath) == true) {
+        ResultFormatter result = this.extractContentAndMoveZip(filePath);
+        if (result.success()) { // if successful remove from tracked list
           iterator.remove();
+        } else {
+          System.out.println(String.format("Failed processing %s", filePath));
         }
       }
     }
@@ -113,43 +113,43 @@ public class FileController implements DirectoryEventListener {
     return false;
   }
 
-  private ResultFormatter extractContentAndMoveZip(Path file) {
-    String zipFilePath = file.getParent().toString();
-    String fileName = file.getFileName().toString();
+  // TODO refactor to separate actions and retry on failure
+  private ResultFormatter extractContentAndMoveZip(Path filePath) {
+    String zipFilePath = filePath.getParent().toString();
+    String fileName = filePath.getFileName().toString();
     try {
+      
       Path destDir = this.createTargetDirectory(fileName);
-
       // try extract the content of the file to a dir within the same dir
       this.unzip(zipFilePath, destDir);
       // move the zip file inside it;
-      this.moveFile(zipFilePath, destDir, fileName);
+      this.moveFileZipFile(zipFilePath, destDir, fileName);
 
       return ResultFormatter.success("Action done on " + fileName);
+      
     } catch (IOException e) {
-      System.out.println("Failed during creation of target dir " + fileName);
-      return ResultFormatter.failure();
-    } catch (Exception e) {
+      System.out.println("Failed during creation of target dir " + e.getMessage()); // TODO move to logger service
       return ResultFormatter.failure();
     }
   }
 
   Path createTargetDirectory(String zipFileName) throws IOException {
+    // creates the final folder name (replace space with _ and remove the .zip to create a dir)
+    String destDirName = zipFileName
+        .replace(".zip", "")
+        .replace(" ", "_");
+
     try {
-
-      String destDirName = zipFileName
-          .replace(".zip", "")
-          .replace(" ", "_");
-
-      Path destFile = Paths.get(this.destDir.getFileName().toString(), destDirName); // joins the destionation dir to the new fileName (like path.resolve)
+      Path destFile = Paths.get(this.destDir.getFileName().toString(), destDirName); // joins the destionation dir to
+                                                                                     // the new fileName (like
+                                                                                     // path.resolve)
 
       // Create directory and parents if missing
       Files.createDirectories(destFile);
 
       return destFile;
     } catch (IOException exception) {
-      System.out.println("Error on targetDirectory");
-      // return "";
-      throw exception;
+      throw new IOException(String.format("Error on creating targetDirectory %s", destDirName));
     }
   }
 
@@ -185,58 +185,60 @@ public class FileController implements DirectoryEventListener {
           Files.copy(zipIn, resolvedPath);
         }
       }
+    } catch (IOException e) {
+      throw new IOException(String.format("Failed to unzip %s into %s", zipFilePath, targetDir));
     }
   }
 
   // private void unzip(String zipFilePath, String destDir) {
-  //   File dir = new File(destDir);
-  //   // create output directory if it doesn't exist
-  //   if (!dir.exists())
-  //     dir.mkdirs();
+  // File dir = new File(destDir);
+  // // create output directory if it doesn't exist
+  // if (!dir.exists())
+  // dir.mkdirs();
 
-  //   FileInputStream fileInputStream;
-  //   // buffer for read and write data to file
-  //   byte[] buffer = new byte[1024];
-  //   try {
+  // FileInputStream fileInputStream;
+  // // buffer for read and write data to file
+  // byte[] buffer = new byte[1024];
+  // try {
 
-  //     // create a stream to read content sequentally, does not have "selecatble"
-  //     // entries and access to individual files like "ZipFile"
-  //     fileInputStream = new FileInputStream(zipFilePath);
-  //     // ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
-  //     // ZipEntry zipEntry = zipInputStream.getNextEntry();
-  //     // while (zipEntry != null) {
-  //     // String fileName = zipEntry.getName();
-  //     // File newFile = new File(destDir + File.separator + fileName);
-  //     // System.out.println("Unzipping to " + newFile.getAbsolutePath());
-  //     // // create directories for sub directories in zip
-  //     // new File(newFile.getParent()).mkdirs();
+  // // create a stream to read content sequentally, does not have "selecatble"
+  // // entries and access to individual files like "ZipFile"
+  // fileInputStream = new FileInputStream(zipFilePath);
+  // // ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
+  // // ZipEntry zipEntry = zipInputStream.getNextEntry();
+  // // while (zipEntry != null) {
+  // // String fileName = zipEntry.getName();
+  // // File newFile = new File(destDir + File.separator + fileName);
+  // // System.out.println("Unzipping to " + newFile.getAbsolutePath());
+  // // // create directories for sub directories in zip
+  // // new File(newFile.getParent()).mkdirs();
 
-  //     // FileOutputStream fileOutputStream = new FileOutputStream(newFile);
-  //     // int len;
-  //     // // writes to output stream until EOF
-  //     // while ((len = zipInputStream.read(buffer)) > 0) {
-  //     // fileOutputStream.write(buffer, 0, len);
-  //     // }
+  // // FileOutputStream fileOutputStream = new FileOutputStream(newFile);
+  // // int len;
+  // // // writes to output stream until EOF
+  // // while ((len = zipInputStream.read(buffer)) > 0) {
+  // // fileOutputStream.write(buffer, 0, len);
+  // // }
 
-  //     // fileOutputStream.close();
-  //     // // close this ZipEntry
-  //     // zipInputStream.closeEntry();
-  //     // zipEntry = zipInputStream.getNextEntry();
-  //     // }
+  // // fileOutputStream.close();
+  // // // close this ZipEntry
+  // // zipInputStream.closeEntry();
+  // // zipEntry = zipInputStream.getNextEntry();
+  // // }
 
-  //     // // close last ZipEntry
-  //     // zipInputStream.closeEntry();
-  //     // zipInputStream.close();
-  //     // fileInputStream.close();
+  // // // close last ZipEntry
+  // // zipInputStream.closeEntry();
+  // // zipInputStream.close();
+  // // fileInputStream.close();
 
-  //     this.unzip2(fileInputStream, Paths.get(destDir));
-  //   } catch (IOException e) {
-  //     e.printStackTrace();
-  //   }
+  // this.unzip2(fileInputStream, Paths.get(destDir));
+  // } catch (IOException e) {
+  // e.printStackTrace();
+  // }
 
   // }
 
-  private void moveFile(String sourceFile, Path targetFile, String fileName) {
+  private void moveFileZipFile(String sourceFile, Path targetFile, String fileName) throws IOException {
     Path source = Paths.get(sourceFile);
 
     try {
@@ -245,10 +247,10 @@ public class FileController implements DirectoryEventListener {
 
       Path temp = Files.move(source, targetFile, StandardCopyOption.REPLACE_EXISTING);
       if (temp != null) {
-        System.out.println("File renamed and moved successfully");
+        System.out.println(String.format("Moved zipFile %s into %s", sourceFile, targetFile)); // TODO log to service
       }
     } catch (IOException e) {
-      System.out.println("Failed to move the file");
+      throw new IOException(String.format("Failed to move the file: %s to %s", sourceFile, targetFile), e);
     }
   }
 
@@ -265,29 +267,29 @@ public class FileController implements DirectoryEventListener {
     return destFile;
   }
 
-
-
   private void setupDestinationDir() {
-    // start by assigning the same path to avoid repeating 
+    // start by assigning the same path to avoid repeating
     this.destDir = this.sourceDir;
     // get from config
     String destinationString = AppConfig.getString(ConfigKey.TARGET_DIR);
-    
+
     // not configured, assign same as source
-    if(destinationString == null){ return; }
+    if (destinationString == null) {
+      return;
+    }
 
     try {
       Path desPath = Paths.get(destinationString);
-      if(Utils.isSameDirectory(this.sourceDir, desPath) == false){
+      if (Utils.isSameDirectory(this.sourceDir, desPath) == false) {
         this.destDir = desPath;
       }
 
     } catch (IOException e) {
       System.out.println("Cannot get required Destination, output redirected to Source dest");
       return; // return with same default source
-    };
+    }
+    ;
   }
-
 
   @Override
   public void onContentChanged(String event) {
