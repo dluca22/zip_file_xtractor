@@ -1,6 +1,5 @@
 package com.dluca22.Main;
 
-import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,9 +16,11 @@ public class App {
         MioLogger ilLogger = new MioLogger(); // test listener
         FileController fileController;
         String sourceDirectory = AppConfig.getString(ConfigKey.WATCH_DIR);
+        System.out.println(String.format("App ln 19: sourceDirectory is %s", sourceDirectory));
 
         // start the directory watcher, not dependent on any logic
         Path sourcePath = Paths.get(sourceDirectory);
+        System.out.println(String.format("App ln 22: sourcePath is %s", sourcePath));
 
         if (Files.exists(sourcePath) == false || Files.isDirectory(sourcePath) == false) {
             System.out.println("[ERROR] " + sourcePath + " does not exist, or not a directory.");

@@ -35,10 +35,13 @@ bin/
 
 
 zip_stl_xtractor/target/
-testFiles/
 .gnupg/
 .gnupg/
 
 target/
 testFiles/
 .gitconfig
+
+testFiles/
+sourceDir/
+outputDir/

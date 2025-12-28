@@ -181,7 +181,7 @@ public class FileValidator {
         long limitSizeBytes = Utils.convertToBytes(fileSizeLimitMB, "MB");
         boolean exceeds = fileSizeBytes > limitSizeBytes;
         if(exceeds){
-            double realFileSizeMB = Utils.convertFromBytes(limitSizeBytes, "MB");
+            double realFileSizeMB = Utils.convertFromBytes(fileSizeBytes, "MB");
             String sizeExceedingMsg  = filePath.getFileName().toString() + " is " + realFileSizeMB + " MB and exceeds the current " + AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB) + " MB limit";
             // Logger.debug(sizeExceedingMsg) // add to logging service
             System.out.println(sizeExceedingMsg);

@@ -18,7 +18,7 @@
 
 //   @BeforeAll
 //   void setup() {
-//     this.baseDir = "/workspace/testFiles";
+//     this.baseDir = "/workspace/sourceDir";
 //     this.file1 = new File(this.baseDir + "/Juan Ciu Fri - 397.zip");
 //     this.controller = new FileController(baseDir);
 //   }

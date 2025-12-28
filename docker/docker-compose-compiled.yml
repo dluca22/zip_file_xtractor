@@ -5,9 +5,9 @@ services:
     user: 1000:1000
     command: tail -f /dev/null # keep alive infinite loop
     volumes:
-      - /home/xliuk/Downloads:/app/testFiles
-      - /home/xliuk/Documents/3d_prints/outputFromZipXractor:/app/outputDir
+      - /home/xliuk/repos/zip_xtractor/sourceDir:/app/sourceDir
+      - /home/xliuk/repos/zip_xtractor/outputDir:/app/outputDir
     environment:
-      WATCH_DIR: "/app/testFiles"
+      WATCH_DIR: "/app/sourceDir"
       TARGET_DIR: "/app/outputDir"
       DEBOUNCE_TIME: "3"

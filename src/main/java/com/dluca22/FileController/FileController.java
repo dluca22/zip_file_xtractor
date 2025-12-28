@@ -1,9 +1,6 @@
 package com.dluca22.FileController;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
@@ -11,12 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 // import java.util.zip.ZipOutputStream;
@@ -38,8 +33,11 @@ public class FileController implements DirectoryEventListener {
   // ArrayList<String> zipFilesNamesInDirectory = new ArrayList<>();
   Set<Path> fileList = new HashSet<>();
 
-  public FileController(Path source) {
+  public FileController(Path sourcePath) {
     // super();
+    System.out.println(String.format("App ln 22: sourcePath is %s", sourcePath));
+    this.sourceDir = sourcePath;
+
     this.setupDestinationDir();
   }
 
@@ -60,13 +58,25 @@ public class FileController implements DirectoryEventListener {
   private void scanFilesInFolder() {
 
     try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
+      int count = 0;
       for (Path path : dstream) {
-        if (Files.isDirectory(path) == false &&
-            FileValidator.isZipFile(path) == true &&
-            FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == false) {
-
-          fileList.add(path); // add file to the traacked ones
+        count++;
+        if (Files.isDirectory(path)) {
+          System.out.println(String.format("[#item %d ] %s is a directory, skipping...", count, path));
+          continue;
         }
+
+        if (FileValidator.isZipFile(path) == false) {
+          System.out.println(String.format("[#item %d ] %s is not a zip file, skipping...", count, path));
+          continue;
+        }
+        if (FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == true) {
+          System.out.println(String.format("[#item %d ] %s exceed size limit, skipping...", count, path));
+          continue;
+        }
+        System.out.println(String.format("[#item %d ] %s IS VALID a zip file, adding...", count, path));
+
+        fileList.add(path); // add file to the traacked ones
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -114,27 +124,33 @@ public class FileController implements DirectoryEventListener {
   }
 
   // TODO refactor to separate actions and retry on failure
-  private ResultFormatter extractContentAndMoveZip(Path filePath) {
-    String zipFilePath = filePath.getParent().toString();
-    String fileName = filePath.getFileName().toString();
-    try {
-      
-      Path destDir = this.createTargetDirectory(fileName);
-      // try extract the content of the file to a dir within the same dir
-      this.unzip(zipFilePath, destDir);
-      // move the zip file inside it;
-      this.moveFileZipFile(zipFilePath, destDir, fileName);
+  private ResultFormatter extractContentAndMoveZip(Path zipFilePath) {
+    String zipFileName = zipFilePath.getFileName().toString();
 
-      return ResultFormatter.success("Action done on " + fileName);
-      
+    try {
+
+      Path destDir = this.createTargetDirectory(zipFileName);
+      Path absoluteDestDir = destDir.toAbsolutePath().normalize();
+
+      // try extract the content of the file to a dir within the same dir
+      this.unzip(zipFilePath, absoluteDestDir);
+      // move the zip file inside it;
+      this.moveFileZipFile(zipFilePath, absoluteDestDir);
+
+      return ResultFormatter.success("Action done on " + zipFileName);
+
     } catch (IOException e) {
       System.out.println("Failed during creation of target dir " + e.getMessage()); // TODO move to logger service
       return ResultFormatter.failure();
     }
   }
 
+  // Input for zipFileName, creates the end directory removing .zip and replacing
+  // whitespace with _
+  // creates the destination path if not existant
   Path createTargetDirectory(String zipFileName) throws IOException {
-    // creates the final folder name (replace space with _ and remove the .zip to create a dir)
+    // creates the final folder name (replace space with _ and remove the .zip to
+    // create a dir)
     String destDirName = zipFileName
         .replace(".zip", "")
         .replace(" ", "_");
@@ -153,40 +169,39 @@ public class FileController implements DirectoryEventListener {
     }
   }
 
-  // private void unzip(String source, String destination) {
-  // try {
-  // ZipFile zipFile = new ZipFile(source);
-  // zipFile.extractAll(destination);
-  // } catch (ZipException e) {
-  // e.printStackTrace();
-  // }
+  public void unzip(Path zipFilePath, Path absoluteDestDir) throws IOException {
+    
 
-  // }
-  // Source - https://stackoverflow.com/a
-  // Posted by Oliv, modified by community. See post 'Timeline' for change history
-  // Retrieved 2025-12-18, License - CC BY-SA 4.0
+    // targetDir = targetDir.toAbsolutePath();
+    try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFilePath))) {
 
-  public void unzip(String zipFilePath, Path targetDir) throws IOException {
-    FileInputStream is = new FileInputStream(zipFilePath);
+      ZipEntry entryInZipFile;
+      while ((entryInZipFile = zipIn.getNextEntry()) != null) {
 
-    targetDir = targetDir.toAbsolutePath();
-    try (ZipInputStream zipIn = new ZipInputStream(is)) {
-      for (ZipEntry zipEntry; (zipEntry = zipIn.getNextEntry()) != null;) {
-        Path resolvedPath = targetDir.resolve(zipEntry.getName()).normalize();
-        if (!resolvedPath.startsWith(targetDir)) {
-          // see: https://snyk.io/research/zip-slip-vulnerability
+        // creates a resolved destiination path for each extracted file
+        // targetDir = /app/output
+        // entry = models/cube.stl
+        // resolved = /app/output/models/cube.stl
+
+        Path resolvedPath = absoluteDestDir.resolve(entryInZipFile.getName()).normalize();
+        if (!resolvedPath.startsWith(absoluteDestDir)) {
+
           throw new RuntimeException("Entry with an illegal path: "
-              + zipEntry.getName());
+              + entryInZipFile.getName());
         }
-        if (zipEntry.isDirectory()) {
+
+        // if zipEntry is a dir safe try to create the resolved path (i.e.
+        // /app/output/models/ )
+        if (entryInZipFile.isDirectory()) {
           Files.createDirectories(resolvedPath);
-        } else {
+        } else { // else safe create parent directories to store the zipEntry uncompressed with
+                 // REPLACE
           Files.createDirectories(resolvedPath.getParent());
-          Files.copy(zipIn, resolvedPath);
+          Files.copy(zipIn, resolvedPath, StandardCopyOption.REPLACE_EXISTING);
         }
       }
     } catch (IOException e) {
-      throw new IOException(String.format("Failed to unzip %s into %s", zipFilePath, targetDir));
+      throw new IOException(String.format("Failed to unzip %s into %s", zipFilePath, destDir), e);
     }
   }
 
@@ -237,20 +252,23 @@ public class FileController implements DirectoryEventListener {
   // }
 
   // }
-
-  private void moveFileZipFile(String sourceFile, Path targetFile, String fileName) throws IOException {
-    Path source = Paths.get(sourceFile);
+  private void moveFileZipFile(Path zipFilePath, Path absoluteDestDir) throws IOException {
 
     try {
       // Ensure target directory exists
-      Files.createDirectories(targetFile.getParent());
+      if (!Files.exists(absoluteDestDir)) {
+        throw new IOException("Somehow destDirectory does not exist!!!");
+      }
+      Path destionationZipFilePath = absoluteDestDir.resolve(zipFilePath.getFileName());
 
-      Path temp = Files.move(source, targetFile, StandardCopyOption.REPLACE_EXISTING);
+      Path temp = Files.move(zipFilePath, destionationZipFilePath, StandardCopyOption.REPLACE_EXISTING);
       if (temp != null) {
-        System.out.println(String.format("Moved zipFile %s into %s", sourceFile, targetFile)); // TODO log to service
+        System.out.println(String.format("Moved zipFile %s into %s", zipFilePath.getFileName().toString(), absoluteDestDir));
       }
     } catch (IOException e) {
-      throw new IOException(String.format("Failed to move the file: %s to %s", sourceFile, targetFile), e);
+      System.out.println(e.getMessage());
+      throw new IOException(String.format("Failed to move the file: %s to %s", zipFilePath.getFileName().toString(),
+          absoluteDestDir.toAbsolutePath()), e);
     }
   }
 

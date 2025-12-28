@@ -14,8 +14,8 @@ public class Playground {
   }
 
   static void checkPathsEquality() {
-    Path source = Paths.get("testFiles");
-    Path dest = Paths.get("testFiles");
+    Path source = Paths.get("sourceDir");
+    Path dest = Paths.get("sourceDir");
 
     System.out.println("Root? " + source.getRoot());
     System.out.println("Parent? " + source.getParent());
@@ -27,7 +27,7 @@ public class Playground {
 
   static void doFileTests() {
     System.out.println("CWD: " + System.getProperty("user.dir"));
-    Path testFile = Paths.get("testFiles/Pepe_keycap.zip");
+    Path testFile = Paths.get("sourceDir/Pepe_keycap.zip");
     System.out.println("File exists: " + Files.exists(testFile));
     System.out.println("File isDir: " + Files.isDirectory(testFile));
 

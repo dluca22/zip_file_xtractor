@@ -9,4 +9,13 @@ docker build -f ./docker/Dockerfile -t zip_xtractor:dev .
   docker compose -f docker-compose-compiled.yml up
 
 # fa partire il c0ontainer normalmente senza fargli eseguire Jvva in modo che non fallisce e si puo ananlzizare
- docker compose -f docker-compose-compiled.yml run \\n  --rm -it \\n  --entrypoint bash \\n  zip_xtractor\n
+ docker compose -f docker-compose-compiled.yml run --rm -it --entrypoint bash zip_xtractor\
+
+
+
+
+
+
+# ISSUES
+
+Una volta compilato e lanciato ricevuto errore 

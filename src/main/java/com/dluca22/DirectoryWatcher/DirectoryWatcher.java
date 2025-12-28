@@ -27,6 +27,8 @@ public class DirectoryWatcher {
 
   // class constructor
   public DirectoryWatcher(Path directory) {
+    System.out.println(String.format("DirectoryWatcher constructor ln 30: directory is %s", directory));
+
     this.directory = directory;
   }
 
