@@ -58,23 +58,25 @@ public class FileController implements DirectoryEventListener {
   private void scanFilesInFolder() {
 
     try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
-      int count = 0;
+      int itemNum = 0;
       for (Path path : dstream) {
-        count++;
+        itemNum++;
         if (Files.isDirectory(path)) {
-          System.out.println(String.format("[#item %d ] %s is a directory, skipping...", count, path));
+          System.out.println(String.format("[#item %d ] INVALID, DIRECTORY! skipping %s", itemNum, path));
           continue;
         }
 
         if (FileValidator.isZipFile(path) == false) {
-          System.out.println(String.format("[#item %d ] %s is not a zip file, skipping...", count, path));
+          System.out.println(String.format("[#item %d ] INVALID NOT_ZIP, skipping %s", itemNum, path));
           continue;
         }
-        if (FileValidator.exceedsFileDimensionLImit(path, AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB)) == true) {
-          System.out.println(String.format("[#item %d ] %s exceed size limit, skipping...", count, path));
+
+        int fileSizeLimitMB = AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB);
+        if (FileValidator.exceedsFileDimensionLImit(path, fileSizeLimitMB) == true) {
+          System.out.println(String.format("[#item %d ] INVALID SIZE, %s exceed %d Mb, skipping...", itemNum, path, fileSizeLimitMB));
           continue;
         }
-        System.out.println(String.format("[#item %d ] %s IS VALID a zip file, adding...", count, path));
+        System.out.println(String.format("[#item %d ] VALID zip file, tracking %s", itemNum, path));
 
         fileList.add(path); // add file to the traacked ones
       }
@@ -91,10 +93,14 @@ public class FileController implements DirectoryEventListener {
       if (this.zipContainsPrintable(filePath) == true) {
         ResultFormatter result = this.extractContentAndMoveZip(filePath);
         if (result.success()) { // if successful remove from tracked list
+          System.out.println(String.format("Removed %s from tracked files", filePath));
           iterator.remove();
         } else {
           System.out.println(String.format("Failed processing %s", filePath));
         }
+      } else {
+        System.out.println("removedddddddddddd");
+        iterator.remove();
       }
     }
   }
@@ -205,53 +211,6 @@ public class FileController implements DirectoryEventListener {
     }
   }
 
-  // private void unzip(String zipFilePath, String destDir) {
-  // File dir = new File(destDir);
-  // // create output directory if it doesn't exist
-  // if (!dir.exists())
-  // dir.mkdirs();
-
-  // FileInputStream fileInputStream;
-  // // buffer for read and write data to file
-  // byte[] buffer = new byte[1024];
-  // try {
-
-  // // create a stream to read content sequentally, does not have "selecatble"
-  // // entries and access to individual files like "ZipFile"
-  // fileInputStream = new FileInputStream(zipFilePath);
-  // // ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
-  // // ZipEntry zipEntry = zipInputStream.getNextEntry();
-  // // while (zipEntry != null) {
-  // // String fileName = zipEntry.getName();
-  // // File newFile = new File(destDir + File.separator + fileName);
-  // // System.out.println("Unzipping to " + newFile.getAbsolutePath());
-  // // // create directories for sub directories in zip
-  // // new File(newFile.getParent()).mkdirs();
-
-  // // FileOutputStream fileOutputStream = new FileOutputStream(newFile);
-  // // int len;
-  // // // writes to output stream until EOF
-  // // while ((len = zipInputStream.read(buffer)) > 0) {
-  // // fileOutputStream.write(buffer, 0, len);
-  // // }
-
-  // // fileOutputStream.close();
-  // // // close this ZipEntry
-  // // zipInputStream.closeEntry();
-  // // zipEntry = zipInputStream.getNextEntry();
-  // // }
-
-  // // // close last ZipEntry
-  // // zipInputStream.closeEntry();
-  // // zipInputStream.close();
-  // // fileInputStream.close();
-
-  // this.unzip2(fileInputStream, Paths.get(destDir));
-  // } catch (IOException e) {
-  // e.printStackTrace();
-  // }
-
-  // }
   private void moveFileZipFile(Path zipFilePath, Path absoluteDestDir) throws IOException {
 
     try {
