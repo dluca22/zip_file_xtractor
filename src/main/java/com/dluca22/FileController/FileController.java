@@ -48,14 +48,13 @@ public class FileController implements DirectoryEventListener {
     }
 
     this.isRunning = true;
-    this.scanFilesInFolder();
-    this.processZipFiles();
+    this.scanFilesInSourceDir();
     this.isRunning = false;
   }
 
   // scan the source directory and zip files (matching conditions) to the Set of
   // tracked ones to process
-  private void scanFilesInFolder() {
+  private void scanFilesInSourceDir() {
 
     try (DirectoryStream<Path> dstream = Files.newDirectoryStream(this.sourceDir)) {
       int itemNum = 0;
@@ -66,19 +65,41 @@ public class FileController implements DirectoryEventListener {
           continue;
         }
 
-        if (FileValidator.isZipFile(path) == false) {
-          System.out.println(String.format("[#item %d ] INVALID NOT_ZIP, skipping %s", itemNum, path));
-          continue;
+        // if not a zipFile, check if is a 3dPrintable and just move it to outputDir if
+        // not the same dir
+        boolean test = FileValidator.isZipFile(path);
+        if ( test == false) {
+          
+          if (FileValidator.is3dPrintableFle(path) == true
+          && Utils.isSameDirectory(this.sourceDir, this.destDir) == false) {
+            // just move the file
+            Path finalPath =  Paths.get(this.destDir.getFileName().toString(), path.getFileName().toString()); 
+
+            Files.move(path, finalPath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println(String.format("[#item %d ] MOVED, %s to %s", itemNum, path, this.destDir));
+            continue;
+          } else {
+            System.out.println(String.format("[#item %d ] INVALID NOT_ZIP, skipping %s", itemNum, path));
+            continue;
+          }
         }
 
         int fileSizeLimitMB = AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB);
         if (FileValidator.exceedsFileDimensionLImit(path, fileSizeLimitMB) == true) {
-          System.out.println(String.format("[#item %d ] INVALID SIZE, %s exceed %d Mb, skipping...", itemNum, path, fileSizeLimitMB));
+          System.out.println(
+              String.format("[#item %d ] INVALID SIZE, %s exceed %d Mb, skipping...", itemNum, path, fileSizeLimitMB));
           continue;
         }
-        System.out.println(String.format("[#item %d ] VALID zip file, tracking %s", itemNum, path));
 
-        fileList.add(path); // add file to the traacked ones
+        if (this.zipContainsPrintable(path) == false) {
+          System.out.println(String.format("INVALID incompatible %s, does not match the valid content", path));
+          continue;
+        }
+        System.out.println(String.format("[#item %d ] VALID zip file, start processing %s", itemNum, path));
+
+        // fileList.add(path); // add file to the traacked ones
+        this.processZipFile(path);
+
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -86,22 +107,12 @@ public class FileController implements DirectoryEventListener {
   }
 
   // runs through fileList and checks if contains printable
-  private void processZipFiles() {
-    java.util.Iterator<Path> iterator = fileList.iterator();
-    while (iterator.hasNext()) {
-      Path filePath = iterator.next();
-      if (this.zipContainsPrintable(filePath) == true) {
-        ResultFormatter result = this.extractContentAndMoveZip(filePath);
-        if (result.success()) { // if successful remove from tracked list
-          System.out.println(String.format("Removed %s from tracked files", filePath));
-          iterator.remove();
-        } else {
-          System.out.println(String.format("Failed processing %s", filePath));
-        }
-      } else {
-        System.out.println("removedddddddddddd");
-        iterator.remove();
-      }
+  private void processZipFile(Path zipFilePath) {
+    ResultFormatter result = this.extractContentAndMoveZip(zipFilePath);
+    if (result.success()) { // if successful remove from tracked list
+      System.out.println(String.format("Successfully extracted and moved %s", zipFilePath));
+    } else {
+      System.out.println(String.format("Error processing %s, unable to extract the content", zipFilePath));
     }
   }
 
@@ -176,7 +187,6 @@ public class FileController implements DirectoryEventListener {
   }
 
   public void unzip(Path zipFilePath, Path absoluteDestDir) throws IOException {
-    
 
     // targetDir = targetDir.toAbsolutePath();
     try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFilePath))) {
@@ -218,11 +228,14 @@ public class FileController implements DirectoryEventListener {
       if (!Files.exists(absoluteDestDir)) {
         throw new IOException("Somehow destDirectory does not exist!!!");
       }
+
+      
       Path destionationZipFilePath = absoluteDestDir.resolve(zipFilePath.getFileName());
 
       Path temp = Files.move(zipFilePath, destionationZipFilePath, StandardCopyOption.REPLACE_EXISTING);
       if (temp != null) {
-        System.out.println(String.format("Moved zipFile %s into %s", zipFilePath.getFileName().toString(), absoluteDestDir));
+        System.out
+            .println(String.format("Moved zipFile %s into %s", zipFilePath.getFileName().toString(), absoluteDestDir));
       }
     } catch (IOException e) {
       System.out.println(e.getMessage());

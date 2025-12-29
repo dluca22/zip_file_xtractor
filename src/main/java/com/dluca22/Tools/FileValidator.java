@@ -98,6 +98,13 @@ public class FileValidator {
         return matchExtension(file.getName(), "zip");
     }
 
+    /**
+     * Same as {@link #isZipFile(File)}, but operates on a {@link Path}
+     * 
+     * @param path the file entry to check
+     * @return {@code true} if the entry name has a {@code .zip} extension;
+     *         {@code false} otherwise
+     */
     public static boolean isZipFile(Path file) {
         return matchExtension(file.getFileName().toString(), "zip");
     }
@@ -122,21 +129,26 @@ public class FileValidator {
     }
 
     /**
-     * Determines if a zip entry (file inside a zip archive) is an STL 3D model file
-     * based on its extension.
+     * Same as {@link #isSTLFile(File)}, but operates on a {@link ZipEntry}
+     * representing a file inside a ZIP archive.
      *
-     * @param zipEntry the ZipEntry object representing a file inside a zip archive
-     * @return {@code true} if the zip entry has a ".stl" extension, {@code false}
-     *         otherwise
-     * 
-     * @examples
-     *           <ul>
-     *           <li>"models/part.stl" → true</li>
-     *           <li>"images/photo.png" → false</li>
-     *           </ul>
+     * @param zipEntry the ZIP entry to check
+     * @return {@code true} if the entry name has a {@code .stl} extension;
+     *         {@code false} otherwise
      */
     public static boolean isSTLFile(ZipEntry zipEntry) {
         return matchExtension(zipEntry.getName(), "stl");
+    }
+
+    /**
+     * Same as {@link #isSTLFile(File)}, but operates on a {@link Path}.
+     *
+     * @param path the path to check
+     * @return {@code true} if the path has a {@code .stl} extension; {@code false}
+     *         otherwise
+     */
+    public static boolean isSTLFile(Path path) {
+        return matchExtension(path.getFileName().toString(), "stl");
     }
 
     /**
@@ -158,6 +170,68 @@ public class FileValidator {
     }
 
     /**
+     * Same as {@link #is3MfFile(ZipEntry zipEntry)}, but operates on a {@link File}
+     *
+     * @param file the file to check
+     * @return {@code true} if the entry name has a {@code .3mf} extension;
+     *         {@code false} otherwise
+     */
+    public static boolean is3MfFile(File file) {
+        return matchExtension(file.getName(), "3mf");
+    }
+
+    /**
+     * Same as {@link #is3MfFile(ZipEntry zipEntry)}, but operates on a {@link Path}
+     *
+     * @param path the file entity to check
+     * @return {@code true} if the entry name has a {@code .3mf} extension;
+     *         {@code false} otherwise
+     */
+    public static boolean is3MfFile(Path path) {
+        return matchExtension(path.getFileName().toString(), "3mf");
+    }
+
+    /**
+     * Determines if a zip entry (file inside a zip archive) is an STL 3D model file
+     * based on its extension.
+     *
+     * @param zipEntry the ZipEntry object representing a file inside a zip archive
+     * @return {@code true} if the zip entry has a ".obj" extension, {@code false}
+     *         otherwise
+     * 
+     * @examples
+     *           <ul>
+     *           <li>"models/part.3mf" → true</li>
+     *           <li>"images/photo.png" → false</li>
+     *           </ul>
+     */
+    public static boolean isObjFile(ZipEntry zipEntry) {
+        return matchExtension(zipEntry.getName(), "obj");
+    }
+
+    /**
+     * Same as {@link #isObjFile(ZipEntry zipEntry)}, but operates on a {@link File}
+     *
+     * @param file the file to check
+     * @return {@code true} if the entry name has a {@code .obj} extension;
+     *         {@code false} otherwise
+     */
+    public static boolean isObjFile(File file) {
+        return matchExtension(file.getName(), "obj");
+    }
+
+    /**
+     * Same as {@link #isObjFile(ZipEntry zipEntry)}, but operates on a {@link Path}
+     *
+     * @param path the file entity to check
+     * @return {@code true} if the entry name has a {@code .obj} extension;
+     *         {@code false} otherwise
+     */
+    public static boolean isObjFile(Path path) {
+        return matchExtension(path.getFileName().toString(), "obj");
+    }
+
+    /**
      * Determines if a zip entry (file inside a zip archive) is an STL 3D model file
      * based on its extension.
      *
@@ -173,16 +247,21 @@ public class FileValidator {
      *           </ul>
      */
     public static boolean is3dPrintableFle(ZipEntry zipEntry) {
-        return isSTLFile(zipEntry) || is3MfFile(zipEntry);
+        return isSTLFile(zipEntry) || is3MfFile(zipEntry) || isObjFile(zipEntry);
+    }
+
+    public static boolean is3dPrintableFle(Path path) {
+        return isSTLFile(path) || is3MfFile(path) || isObjFile(path);
     }
 
     public static boolean exceedsFileDimensionLImit(Path filePath, int fileSizeLimitMB) throws IOException {
         long fileSizeBytes = Files.size(filePath);
         long limitSizeBytes = Utils.convertToBytes(fileSizeLimitMB, "MB");
         boolean exceeds = fileSizeBytes > limitSizeBytes;
-        if(exceeds){
+        if (exceeds) {
             double realFileSizeMB = Utils.convertFromBytes(fileSizeBytes, "MB");
-            String sizeExceedingMsg  = filePath.getFileName().toString() + " is " + realFileSizeMB + " MB and exceeds the current " + AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB) + " MB limit";
+            String sizeExceedingMsg = filePath.getFileName().toString() + " is " + realFileSizeMB
+                    + " MB and exceeds the current " + AppConfig.getInt(ConfigKey.FILE_SIZE_LIMIT_MB) + " MB limit";
             // Logger.debug(sizeExceedingMsg) // add to logging service
             System.out.println(sizeExceedingMsg);
         }
