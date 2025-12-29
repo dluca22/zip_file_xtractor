@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -43,13 +44,9 @@ public class FileController implements DirectoryEventListener {
 
   public void run() {
 
-    if (this.isRunning) {
-      return;
-    }
-
-    this.isRunning = true;
+    // this.isRunning = true;
     this.scanFilesInSourceDir();
-    this.isRunning = false;
+    // this.isRunning = false;
   }
 
   // scan the source directory and zip files (matching conditions) to the Set of
@@ -68,12 +65,12 @@ public class FileController implements DirectoryEventListener {
         // if not a zipFile, check if is a 3dPrintable and just move it to outputDir if
         // not the same dir
         boolean test = FileValidator.isZipFile(path);
-        if ( test == false) {
-          
+        if (test == false) {
+
           if (FileValidator.is3dPrintableFle(path) == true
-          && Utils.isSameDirectory(this.sourceDir, this.destDir) == false) {
+              && Utils.isSameDirectory(this.sourceDir, this.destDir) == false) {
             // just move the file
-            Path finalPath =  Paths.get(this.destDir.getFileName().toString(), path.getFileName().toString()); 
+            Path finalPath = Paths.get(this.destDir.getFileName().toString(), path.getFileName().toString());
 
             Files.move(path, finalPath, StandardCopyOption.REPLACE_EXISTING);
             System.out.println(String.format("[#item %d ] MOVED, %s to %s", itemNum, path, this.destDir));
@@ -229,7 +226,6 @@ public class FileController implements DirectoryEventListener {
         throw new IOException("Somehow destDirectory does not exist!!!");
       }
 
-      
       Path destionationZipFilePath = absoluteDestDir.resolve(zipFilePath.getFileName());
 
       Path temp = Files.move(zipFilePath, destionationZipFilePath, StandardCopyOption.REPLACE_EXISTING);
@@ -284,7 +280,16 @@ public class FileController implements DirectoryEventListener {
   @Override
   public void onContentChanged(String event) {
     if (this.isRunning == false) {
-      this.run();
+      // System.out.println(event);
+      try {
+        this.isRunning = true;
+        TimeUnit.SECONDS.sleep(2);
+        this.run();
+        this.isRunning = false;
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
     }
   }
 }
